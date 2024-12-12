@@ -22,20 +22,29 @@ WITH first_names AS (
 ),
 last_names AS (
     SELECT UNNEST(ARRAY['Ivanov', 'Petrov', 'Smirnov', 'Kuznetsov', 'Popov', 'Vasiliev', 'Mikhailov', 'Fedorov', 'Nikolaev']) AS last_name
+),
+full_names AS (
+    SELECT
+        (SELECT first_name FROM first_names ORDER BY RANDOM() + GENERATE_SERIES LIMIT 1) AS first_name,
+        (SELECT last_name FROM last_names ORDER BY RANDOM() + GENERATE_SERIES LIMIT 1) AS last_name
+    FROM GENERATE_SERIES(1, 2000)
+    ORDER BY RANDOM() + GENERATE_SERIES
 )
 INSERT INTO clients (first_name, last_name, phone_number, email, created_at)
-SELECT 
-    f.first_name,
-    l.last_name,
-    CONCAT('+7', (900 + FLOOR(RANDOM() * 100))::INT,
-        (1000000 + FLOOR(RANDOM() * 9000000))::INT
-    ) AS phone_number, -- Все совпадения случайны!
-    CONCAT(LOWER(f.first_name), '.', LOWER(l.last_name), '@example.com') AS email,
-    NOW() - (FLOOR(RANDOM() * 365) || ' days')::INTERVAL - INTERVAL '2 years' AS created_at 
-FROM first_names f
-CROSS JOIN last_names l
-ORDER BY RANDOM() DESC
-LIMIT 200
+SELECT * FROM 
+(
+	SELECT DISTINCT ON (email)
+	    f.first_name,
+	    f.last_name,
+	    CONCAT('+7', (900 + FLOOR(RANDOM() * 100))::INT,
+	        (1000000 + FLOOR(RANDOM() * 9000000))::INT
+	    ) AS phone_number, -- Все совпадения случайны!
+	    CONCAT(LOWER(f.first_name), '.', LOWER(f.last_name), (FLOOR(RANDOM() * 100))::INT, '@example.com') AS email,
+	    NOW() - (FLOOR(RANDOM() * 365) || ' days')::INTERVAL - INTERVAL '2 years' AS created_at 
+	FROM full_names f
+	LIMIT 2000
+)
+ORDER BY RANDOM()
 ON CONFLICT (phone_number) DO NOTHING; -- Скипаем строку, если номер уже существует
 
 
@@ -47,32 +56,32 @@ VALUES
 
 
 WITH random_clients AS (
-    SELECT client_id, ROW_NUMBER() OVER (ORDER BY RANDOM()) AS rn
+    SELECT client_id
     FROM clients
-    LIMIT 300
+    ORDER BY RANDOM()
+    LIMIT 2000
 )
 INSERT INTO accounts (client_id, account_type_id, currency_code, balance, opened_at)
-SELECT 
-    rc.client_id,
-    act.account_type_id account_type_id,
-    c.currency_code AS currency_code,
-    FLOOR(RANDOM() * 10000) AS balance,
-    NOW() - (FLOOR(RANDOM() * 365) || ' days')::INTERVAL - INTERVAL '1 year' AS opened_at
-FROM random_clients rc
-JOIN account_types act ON TRUE
-JOIN currencies c ON TRUE
-ORDER BY RANDOM() DESC
-LIMIT 300
+SELECT * FROM (
+	SELECT 
+	    rc.client_id,
+	    act.account_type_id account_type_id,
+	    c.currency_code AS currency_code,
+	    FLOOR(RANDOM() * 10000)::NUMERIC(15, 2) AS balance,
+	    NOW() - (FLOOR(RANDOM() * 365) || ' days')::INTERVAL - INTERVAL '1 year' AS opened_at
+	FROM random_clients rc
+	JOIN account_types act ON TRUE
+	JOIN currencies c ON TRUE
+)
+ORDER BY RANDOM()
+LIMIT 3000
 ON CONFLICT (client_id, account_type_id, currency_code) DO NOTHING
 RETURNING client_id, account_type_id, currency_code;
 
 
-
 WITH random_accounts AS (
-    SELECT account_id
-    FROM accounts
-    ORDER BY RANDOM()
-    LIMIT 300
+    (SELECT (SELECT account_id FROM accounts ORDER BY RANDOM() + GENERATE_SERIES LIMIT 1)
+    FROM GENERATE_SERIES(1, 50000))
 ),
 random_operation_type AS (
     SELECT operation_type_id
@@ -80,17 +89,19 @@ random_operation_type AS (
     LIMIT 4
 )
 INSERT INTO operations (account_id, operation_type_id, amount, currency_code, occured_at)
-SELECT 
-    ra.account_id,
-    rot.operation_type_id,
-	FLOOR(RANDOM() * 1000) + 1 AS amount,
-	c.currency_code,
-    NOW() - (FLOOR(RANDOM() * 90) || ' days')::INTERVAL AS occured_at 
-FROM random_accounts ra
-JOIN random_operation_type rot ON TRUE
-JOIN currencies c ON TRUE
-ORDER BY RANDOM() DESC
-LIMIT 1000;
+SELECT * FROM (
+	SELECT 
+	    ra.account_id,
+	    rot.operation_type_id,
+		(FLOOR(RANDOM() * 10000) + 1)::NUMERIC(15, 2) AS amount,
+		c.currency_code,
+	    NOW() - (FLOOR(RANDOM() * 90) || ' days')::INTERVAL AS occured_at 
+	FROM random_accounts ra
+	JOIN random_operation_type rot ON TRUE
+	JOIN currencies c ON TRUE
+)
+ORDER BY RANDOM()
+LIMIT 50000;
 
 
 WITH valid_accounts AS (
