@@ -14,7 +14,7 @@ RETURNS TABLE (
 BEGIN
     RETURN QUERY
     SELECT a.account_id, act.account_type_name, cur.currency_name, a.balance,
-       (SELECT MAX(o.occured_at)
+       (SELECT MAX(o.occurred_at)
         FROM operations o
         WHERE o.account_id = a.account_id)
     FROM accounts a
@@ -34,15 +34,15 @@ RETURNS TABLE (
 	operation_id BIGINT,
 	operation_name VARCHAR(50),
 	amount NUMERIC(15, 2),
-	occured_at TIMESTAMP
+	occurred_at TIMESTAMP
 ) AS $$
 BEGIN 
 	RETURN QUERY
-	SELECT o.operation_id, ot.operation_name, o.amount, o.occured_at
+	SELECT o.operation_id, ot.operation_name, o.amount, o.occurred_at
 	FROM operations o
 	JOIN operation_types ot ON o.operation_type_id = ot.operation_type_id
 	WHERE o.account_id = id
-	ORDER BY occured_at DESC 
+	ORDER BY occurred_at DESC 
 	LIMIT 10;
 END;
 $$ LANGUAGE plpgsql;

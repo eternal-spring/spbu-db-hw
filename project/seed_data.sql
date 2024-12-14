@@ -42,7 +42,7 @@ SELECT * FROM
 	    CONCAT(LOWER(f.first_name), '.', LOWER(f.last_name), (FLOOR(RANDOM() * 100))::INT, '@example.com') AS email,
 	    NOW() - (FLOOR(RANDOM() * 365) || ' days')::INTERVAL - INTERVAL '2 years' AS created_at 
 	FROM full_names f
-	LIMIT 2000
+	LIMIT 200
 )
 ORDER BY RANDOM()
 ON CONFLICT (phone_number) DO NOTHING; -- Скипаем строку, если номер уже существует
@@ -59,7 +59,7 @@ WITH random_clients AS (
     SELECT client_id
     FROM clients
     ORDER BY RANDOM()
-    LIMIT 2000
+    LIMIT 200
 )
 INSERT INTO accounts (client_id, account_type_id, currency_code, balance, opened_at)
 SELECT * FROM (
@@ -74,34 +74,32 @@ SELECT * FROM (
 	JOIN currencies c ON TRUE
 )
 ORDER BY RANDOM()
-LIMIT 3000
+LIMIT 500
 ON CONFLICT (client_id, account_type_id, currency_code) DO NOTHING
 RETURNING client_id, account_type_id, currency_code;
 
 
 WITH random_accounts AS (
     (SELECT (SELECT account_id FROM accounts ORDER BY RANDOM() + GENERATE_SERIES LIMIT 1)
-    FROM GENERATE_SERIES(1, 50000))
+    FROM GENERATE_SERIES(1, 1000))
 ),
 random_operation_type AS (
     SELECT operation_type_id
     FROM operation_types
     LIMIT 4
 )
-INSERT INTO operations (account_id, operation_type_id, amount, currency_code, occured_at)
+INSERT INTO operations (account_id, operation_type_id, amount, occurred_at)
 SELECT * FROM (
 	SELECT 
 	    ra.account_id,
 	    rot.operation_type_id,
 		(FLOOR(RANDOM() * 10000) + 1)::NUMERIC(15, 2) AS amount,
-		c.currency_code,
-	    NOW() - (FLOOR(RANDOM() * 90) || ' days')::INTERVAL AS occured_at 
+		NOW() - (FLOOR(RANDOM() * 90) || ' days')::INTERVAL AS occurred_at 
 	FROM random_accounts ra
 	JOIN random_operation_type rot ON TRUE
-	JOIN currencies c ON TRUE
 )
 ORDER BY RANDOM()
-LIMIT 50000;
+LIMIT 5000;
 
 
 WITH valid_accounts AS (
@@ -109,11 +107,11 @@ WITH valid_accounts AS (
     FROM accounts
     WHERE account_type_id IN (1, 2) -- Только для Savings и Credit
     ORDER BY RANDOM()
-    LIMIT 50
+    LIMIT 150
 )
 INSERT INTO interest_rates (account_id, percentage)
 SELECT 
     va.account_id,
-    RANDOM() * 0.2 AS percentage 
+    RANDOM() * 20 AS percentage 
 FROM valid_accounts va
 JOIN accounts a ON va.account_id = a.account_id;
