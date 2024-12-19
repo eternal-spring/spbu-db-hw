@@ -47,8 +47,7 @@ CREATE TABLE IF NOT EXISTS operations (
 	account_id INT NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
 	operation_type_id INT NOT NULL REFERENCES operation_types(operation_type_id) ON DELETE RESTRICT,
 	amount NUMERIC(15, 2) NOT NULL CHECK (amount > 0),
-	currency_code CHAR(3) NOT NULL REFERENCES currencies(currency_code) ON DELETE RESTRICT,
-	occured_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	occurred_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS interest_rates (

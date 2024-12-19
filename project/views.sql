@@ -18,12 +18,12 @@ SELECT * FROM clients_info LIMIT 5;
 
 --Ранжирование клиентов по числу операций в каждой валюте
 CREATE MATERIALIZED VIEW IF NOT EXISTS clients_currency_operations_count AS
-SELECT c.client_id, COUNT(o.operation_id) AS total_operations, o.currency_code,
-	ROW_NUMBER() OVER (PARTITION BY o.currency_code ORDER BY COUNT(o.operation_id) DESC) AS rank
+SELECT c.client_id, COUNT(o.operation_id) AS total_operations, a.currency_code,
+	ROW_NUMBER() OVER (PARTITION BY a.currency_code ORDER BY COUNT(o.operation_id) DESC) AS rank
 FROM clients c 
 JOIN accounts a ON c.client_id = a.client_id 
 JOIN operations o ON a.account_id = o.account_id 
-GROUP BY c.client_id, o.currency_code
-ORDER BY rank, o.currency_code ASC;
+GROUP BY c.client_id, a.currency_code
+ORDER BY rank, a.currency_code ASC;
 
 SELECT * FROM clients_currency_operations_count LIMIT 15;
